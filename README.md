@@ -1,10 +1,12 @@
-# Thought probes in frontline health worker training
+# Frontline Training Analytics
 
-**Phase 1 — measurement pilot with synthetic data.** How often are task-unrelated thoughts reported during low-stakes practice across different immediate post-test score bands?
+This notebook uses fully synthetic data to ask whether quiz scores and brief thought reports can forecast delayed quiz scores in new training batches, and whether those forecasts help allocate limited early refresher slots. A separate extension tests whether simulated response times and gaze can predict a report at an upcoming thought prompt.
+
+**Key finding:** Ranking batches by immediate post-test scores chose the same two batches as the forecast model. The model did not improve the scheduling decision in this simulation. These results demonstrate an evaluation method, not effectiveness in real training.
 
 ## Reproduce
 
-Start with `frontline_training_analytics.ipynb`: it combines measurement, forecasting (including the baseline exercises), and refresher scheduling, with five charts and saved outputs. The original notebooks remain available for reference.
+Open the [combined notebook](frontline_training_analytics.ipynb) to read the full analysis and five saved charts, or run it locally using the steps below.
 
 With Python 3.10 or later installed, open a terminal in this folder and run:
 
@@ -13,7 +15,7 @@ python -m pip install -r requirements.txt
 python -m notebook frontline_training_analytics.ipynb
 ```
 
-Select **Restart Kernel and Run All Cells**. The combined notebook uses NumPy for forecasting and Matplotlib for charts. All combined code cells were executed in one fresh Python process, and the charts are saved in the notebook. The Jupyter interface was not tested. To run Phase 1 separately, open `phase1_measurement.ipynb` instead; its analysis uses only the standard library.
+Select **Restart Kernel and Run All Cells**. Keep the CSV alongside the notebook. The notebook uses NumPy for forecasting and Matplotlib for charts. The combined notebook was also checked in Jupyter.
 
 ## Dummy dataset
 
@@ -51,7 +53,7 @@ If none versus all skips involved unrelated thoughts (excluding unsure responses
 
 ## Phase 2A: Delayed-score baseline
 
-Open `phase2_baseline.ipynb` using the same instructions. It generates a separate, fully synthetic benchmark and forecasts each delayed score using only the immediate post-test score. Of eight batches, six were reserved for development and two were evaluated (48 workers, zero overlap).
+In the combined notebook, Phase 2A generates a separate synthetic benchmark and forecasts each delayed score using only the immediate post-test score. Of eight batches, six were reserved for development and two were evaluated (48 workers, zero overlap).
 
 The baseline missed by **6.46 percentage points on average** (5.29 and 7.62 by batch) and overpredicted by **4.21 points on average**. All notebook code cells ran in Python. The results reflect the simulated score changes, not observed retention. The evaluated batches are now visible, so any tuning informed by them needs a fresh final test.
 
@@ -61,7 +63,7 @@ The same notebook learns a **−3.99-point adjustment** from development batches
 
 ## Phase 2C: Predict delayed scores on unseen batches
 
-After installing the updated requirements in a Python 3.10+ environment, run `python -m notebook phase2_prediction.ipynb` and select **Restart Kernel and Run All Cells**. This offline prototype uses NumPy and a fresh synthetic dataset. It makes forecasts after training and practice, before the delayed quiz and any refresher.
+Phase 2C reads the bundled CSV and makes forecasts after training and practice, before the delayed quiz and any refresher.
 
 - Compare no change, a learned average adjustment, and linear models using post-test alone, pre- and post-tests, or quizzes plus optional thought probes.
 - Fit on 14 batches and score all approaches on the same six held-out batches. Compare average absolute error in percentage points, signed error, and the probe models' errors by batch.
@@ -74,7 +76,7 @@ After installing the updated requirements in a Python 3.10+ environment, run `py
 | No direct probe signal | 7.53 | 6.36 | 6.40 | 6.34 | 6.45 |
 | Probe signal built in | 7.59 | 6.86 | 6.81 | 6.74 | 6.55 |
 
-Adding the pre-test improved forecasts slightly in both scenarios. Adding probes worsened pooled forecasts without the signal and improved them with it, but helped only three of six batches in the signal scenario. All Phase 2C code cells ran in Python with NumPy 2.2.3; the Jupyter interface was not tested.
+Adding the pre-test improved forecasts slightly in both scenarios. Adding probes worsened pooled forecasts without the signal and improved them with it, but helped only three of six batches in the signal scenario.
 
 **Robustness check (combined notebook):** Over 50 fresh simulated datasets per scenario, adding probes helped in **14/50** runs without a direct signal (mean change in error **+0.037 points**) and **40/50** with the signal built in (**−0.133 points**). Negative means smaller held-out error. This measures variability across synthetic batches, not real-world effectiveness.
 
@@ -88,14 +90,14 @@ Across 50 paired seeds per scenario, adding gaze changed mean F1 by **+0.171** w
 
 ## Phase 3: Simulate refresher scheduling
 
-Open `phase3_scheduling.ipynb` and run all cells. A quiz-only model trained on 14 synthetic batches ranks six fresh batches for two early slots. Compare usual timing for everyone, a lottery for two early slots, and assigning those slots to the two lowest forecasts. Each batch gets one refresher, and everyone takes the follow-up quiz on day 42.
+In Phase 3, a quiz-only model trained on 14 synthetic batches ranks six fresh batches for two early slots. We compare usual timing for everyone, a lottery for two early slots, ranking by forecast scores, and ranking by immediate post-test averages. Each batch gets one refresher, and everyone takes the follow-up quiz on day 42.
 
-| Assumed timing effect | Usual | Lottery | Forecast-guided |
-| --- | ---: | ---: | ---: |
-| None | 70.60 | 70.60 | 70.60 |
-| Earlier helps lower-score batches more | 70.60 | 71.68 | 72.12 |
-| Earlier is less effective | 70.60 | 69.95 | 69.95 |
+| Assumed timing effect | Usual | Lottery | Forecast-guided | Post-test-only rule |
+| --- | ---: | ---: | ---: | ---: |
+| None | 70.60 | 70.60 | 70.60 | 70.60 |
+| Earlier helps lower-score batches more | 70.60 | 71.68 | 72.12 | 72.12 |
+| Earlier is less effective | 70.60 | 69.95 | 69.95 | 69.95 |
 
-Values are simulated mean follow-up scores. A fourth rule, assigning early slots to the two lowest immediate post-test averages, picked the same batches as the model and matched its outcomes in all three scenarios. All policies use three trainer delivery hours and 72 learner hours; forecast-guided scheduling adds an assumed 10 planning minutes. No delivery-time savings were demonstrated. All code cells ran in Python; the Jupyter interface was not tested.
+Values are simulated mean follow-up scores. The post-test-only rule picked the same two batches as the model and matched its outcomes in all three scenarios. All policies use three trainer delivery hours and 72 learner hours; forecast-guided scheduling adds an assumed 10 planning minutes. No delivery-time savings were demonstrated.
 
-The simulation tests the evaluation method, not real-world retention or the benefit of an earlier refresher. No real records, programme identifiers, or curriculum materials are included. The earlier `simulate_probes.py` is a separate prototype and is not used by the notebooks.
+The simulation tests the evaluation method, not real-world retention or the benefit of an earlier refresher. No real records, programme identifiers, or curriculum materials are included.
